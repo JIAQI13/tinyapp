@@ -2,10 +2,15 @@ const PORT = 8080; // default port 8080
 const express = require("express");
 const morgan = require("morgan");
 const bodyParser = require("body-parser");
-var crypto = require("crypto");
+var cookieParser = require('cookie-parser')
 
 const app = express();
 app.set("view engine", "ejs");
+
+/*
+user data
+*/
+const users = { 'abc': "123" };
 
 /*
 url database
@@ -31,11 +36,14 @@ function generateRandomString() {
     return result;
 }
 
+
+
 /*
 use middleware
 */
 app.use(morgan("dev"));
 app.use(bodyParser.urlencoded({ extended: true }));
+app.use(cookieParser());
 
 /*
 routes
@@ -45,7 +53,7 @@ app.get("/", (req, res) => {
 });
 
 app.get("/urls", (req, res) => {
-    const templateVars = { urls: urlDatabase };
+    const templateVars = { urls: urlDatabase, username: req.cookies["user"] };
     res.render("urls_index", templateVars);
 });
 
@@ -53,7 +61,8 @@ app.get("/urls", (req, res) => {
 create
 */
 app.get("/urls/new", (req, res) => {
-    res.render("urls_new");
+    const templateVars = { username: req.cookies["username"] };
+    res.render("urls_new", templateVars);
 });
 
 app.post("/urls", (req, res) => {
@@ -67,7 +76,7 @@ app.post("/urls", (req, res) => {
 read
 */
 app.get("/urls/:shortURL", (req, res) => {
-    const templateVars = { shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL] };
+    const templateVars = { shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL], username: req.cookies["username"] };
     res.render("urls_show", templateVars);
 });
 
@@ -94,6 +103,25 @@ app.post("/urls/:shortURL/delete", (req, res) => {
 });
 
 
+/*
+login
+*/
+app.get("/login", (req, res) => {
+    res.render("login");
+});
+
+app.post("/login", (req, res) => {
+    let testName = req.body.username;
+    let testPassword = req.body.password;
+    if (users[testName] && users[testName] === testPassword){
+      res.cookie("user",testName);
+      res.redirect("/");//log in success page
+      console.log('log in success');
+    } else {
+      res.redirect("/");
+      console.log('log in failed');
+    }
+  });
 
 
 
