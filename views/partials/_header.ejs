@@ -1,16 +1,25 @@
 <header>
-    <nav class="navbar navbar-expand-md navbar-dark bg-success">
-      <a class="navbar-brand" href="/urls">TinyApp</a>
-      <%= username %>
-      <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNavAltMarkup" aria-controls="navbarNavAltMarkup" aria-expanded="false" aria-label="Toggle navigation">
-        <span class="navbar-toggler-icon"></span>
-      </button>
-      <div class="collapse navbar-collapse" id="navbarNavAltMarkup">
-        <div class="navbar-nav">
-          <a class="nav-item nav-link" href="/urls">My URLs</a>
-          <a class="nav-item nav-link" href="/urls/new">Create New URL</a>
-          <a class="nav-item nav-link" href="/login">Login</a><input class="form-control" type="text" name="longURL" placeholder="username">
-        </div>
+  <nav class="navbar navbar-expand-md navbar-dark bg-success">
+    <a class="navbar-brand" href="/urls">TinyApp</a>
+
+    <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbarNavAltMarkup"
+      aria-controls="navbarNavAltMarkup" aria-expanded="false" aria-label="Toggle navigation">
+      <span class="navbar-toggler-icon"></span>
+    </button>
+    <div class="collapse navbar-collapse" id="navbarNavAltMarkup">
+      <div class="navbar-nav">
+        <a class="nav-item nav-link" href="/urls">My URLs</a>
+        <a class="nav-item nav-link" href="/urls/new">Create New URL</a>
       </div>
-    </nav>
-  </header>
+      <%if (username) { %>
+          <ul class="navbar-nav ml-auto">Log In As <%= username %>!</ul>
+          <a href="/logout"></a><input type=button class="btn btn-outline-dark" onClick="parent.location='/logout'" value='Logout'>
+        <% }else{ %>
+          <div class="navbar-nav ml-auto">
+          <a class="nav-item nav-link ml-auto" href="/login">Login</a>
+          <a class="nav-item nav-link ml-auto" href="/login">Register</a>
+        </div>
+          <% }%> 
+    </div>
+  </nav>
+</header>

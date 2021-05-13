@@ -10,7 +10,25 @@ app.set("view engine", "ejs");
 /*
 user data
 */
-const users = { 'abc': "123" };
+
+const users = {
+    "userRandomID": {
+        id: "userRandomID",
+        email: "user@example.com",
+        password: "purple-monkey-dinosaur"
+    },
+    "user2RandomID": {
+        id: "user2RandomID",
+        email: "user2@example.com",
+        password: "dishwasher-funk"
+    },
+    "abcdefg": {
+        id: "abcdefg",
+        email: "abc",
+        password: "123"
+    }
+}
+
 
 /*
 url database
@@ -76,7 +94,11 @@ app.post("/urls", (req, res) => {
 read
 */
 app.get("/urls/:shortURL", (req, res) => {
-    const templateVars = { shortURL: req.params.shortURL, longURL: urlDatabase[req.params.shortURL], username: req.cookies["username"] };
+    const templateVars = {
+        shortURL: req.params.shortURL,
+        longURL: urlDatabase[req.params.shortURL],
+        username: req.cookies["username"]
+    };
     res.render("urls_show", templateVars);
 });
 
@@ -102,27 +124,55 @@ app.post("/urls/:shortURL/delete", (req, res) => {
     res.redirect("/urls");
 });
 
+/*
+register
+*/
+app.get('/register', (req, res) => {
+    const templateVars = { username: req.cookies["username"] };
+    res.render("register", templateVars);
+});
+
+app.post("/register", (req, res) => {
+    console.log("req.body:", req.body);
+    let idString = generateRandomString();
+    console.log(idString);
+    if (!req.body.email || !req.body.password) {
+        res.send(400, 'empty emaill or password');
+    }
+    users[idString] = { id: idString, email: req.body.email, password: req.body.password };
+    console.log("users before:", users);
+    res.redirect("/login");
+});
 
 /*
 login
 */
 app.get("/login", (req, res) => {
-    res.render("login");
+    const templateVars = { username: req.cookies["username"] };
+    res.render("login", templateVars);
 });
 
 app.post("/login", (req, res) => {
-    let testName = req.body.username;
+    let testEmail = req.body.email;
     let testPassword = req.body.password;
-    if (users[testName] && users[testName] === testPassword){
-      res.cookie("user",testName);
-      res.redirect("/");//log in success page
-      console.log('log in success');
-    } else {
-      res.redirect("/");
-      console.log('log in failed');
+    for (let i in users) {
+        console.log(users[i].email);
+        console.log(users[i].password);
+        if (users[i].email === testEmail && users[i].password === testPassword) {
+            res.cookie("user", testEmail);
+            res.redirect("/urls");
+        }
     }
-  });
+    res.send('Wrong credentials');
+    console.log('log in failed');
+});
 
-
+/*
+logout
+*/
+app.get("/logout", (req, res) => {
+    res.clearCookie("user");
+    res.redirect('/');
+});
 
 app.listen(PORT, () => console.log(`Example app listening on port ${PORT}!`));
