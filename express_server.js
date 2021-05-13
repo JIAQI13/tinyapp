@@ -2,7 +2,8 @@ const PORT = 8080; // default port 8080
 const express = require("express");
 const morgan = require("morgan");
 const bodyParser = require("body-parser");
-var cookieParser = require('cookie-parser')
+var cookieParser = require('cookie-parser');
+const bcrypt = require('bcryptjs');
 
 const app = express();
 app.set("view engine", "ejs");
@@ -24,7 +25,7 @@ const users = {
     },
     "abcdefg": {
         id: "abcdefg",
-        email: "abc",
+        email: "abc@abc",
         password: "123"
     }
 }
@@ -34,9 +35,9 @@ const users = {
 url database
 */
 const urlDatabase = {
-    b6UTxQ: { longURL: "https://www.tsn.ca", userID: "aJ48lW" },
-    i3BoGr: { longURL: "https://www.google.ca", userID: "aJ48lW" }
-  };
+    b6UTxQ: { longURL: "https://www.tsn.ca", userID: "abcdefg" },
+    i3BoGr: { longURL: "https://www.google.ca", userID: "userRandomID" }
+};
 
 /*
 utility function that generate random string for our url
@@ -67,6 +68,19 @@ const getUserByEmail = function (emailString) {
 };
 
 /*
+return the URLs where the userID is equal to the id of the currently logged-in user
+*/
+const urlForUser = function (userString) {
+    let result = {};
+    for (let i in urlDatabase) {
+        if (urlDatabase[i].userID === userString) {
+            result[i] = urlDatabase[i];
+        }
+    }
+    return result;
+}
+
+/*
 use middleware
 */
 app.use(morgan("dev"));
@@ -81,9 +95,10 @@ app.get("/", (req, res) => {
 });
 
 app.get("/urls", (req, res) => {
-    const templateVars = { urls: urlDatabase, user_id: req.cookies["user_id"] };
-    console.log(urlDatabase);
-    console.log(users);
+    let result = urlForUser(req.cookies["user_id"]);
+    const templateVars = { urls: result, user_id: req.cookies["user_id"] };
+    //console.log(result);
+    console.log('users', users);
     res.render("urls_index", templateVars);
 });
 
@@ -92,6 +107,7 @@ create
 */
 app.get("/urls/new", (req, res) => {
     const templateVars = { user_id: req.cookies["user_id"] };
+    if (!req.cookies["user_id"]) { res.redirect('/urls'); }
     res.render("urls_new", templateVars);
 });
 
@@ -115,7 +131,7 @@ app.get("/urls/:shortURL", (req, res) => {
 });
 
 app.get("/u/:shortURL", (req, res) => {
-    const longURL = urlDatabase[req.params.shortURL];
+    const longURL = urlDatabase[req.params.shortURL].longURL;
     res.redirect(longURL);
 });
 
@@ -123,17 +139,23 @@ app.get("/u/:shortURL", (req, res) => {
 update
 */
 app.post("/urls/:shortURL/update", (req, res) => {
-    urlDatabase[req.params.shortURL] = 'http://' + req.body.longURL;
-    res.redirect("/urls");
+    if (req.cookies["user_id"] === urlDatabase[req.params.shortURL].userID) {
+        urlDatabase[req.params.shortURL].longURL = 'http://' + req.body.longURL;
+        res.redirect("/urls");
+    }
+    res.send(400, 'thats not ur url kid,dont mess around');
 });
 
 /*
 delete
 */
 app.post("/urls/:shortURL/delete", (req, res) => {
-    const urlToDelete = req.params.shortURL;
-    delete urlDatabase[urlToDelete];
-    res.redirect("/urls");
+    if (req.cookies["user_id"] === urlDatabase[req.params.shortURL].userID) {
+        const urlToDelete = req.params.shortURL;
+        delete urlDatabase[urlToDelete];
+        res.redirect("/urls");
+    }
+    res.send(400, 'thats not ur url kid,dont mess around');
 });
 
 /*
@@ -152,10 +174,20 @@ app.post("/register", (req, res) => {
     } else if (getUserByEmail(req.body.email)) {
         res.send(400, 'email already used');
     } else {
-        users[idString] = { id: idString, email: req.body.email, password: req.body.password };
-        res.redirect("/login");
+        bcrypt.genSalt(10)
+            .then((salt) => {
+                return bcrypt.hash(req.body.password, salt);
+            })
+            .then((hash) => {
+                users[idString] = {
+                    id: idString,
+                    email: req.body.email,
+                    password: hash
+                };
+                console.log(users);
+                res.redirect('/login');
+            });
     }
-
 });
 
 /*
@@ -166,17 +198,36 @@ app.get("/login", (req, res) => {
     res.render("login", templateVars);
 });
 
+
+const Auth = function (testEmail, testPassword) {
+    for (let i in users) {
+        let result = bcrypt.compareSync(testPassword, users[i].password)
+        // (console.log(`${result}   ${users[i].email}`);
+        if (result && users[i].email === testEmail) {
+            return i;
+        }
+    }   
+    return false;
+}
+
 app.post("/login", (req, res) => {
     let testEmail = req.body.email;
     let testPassword = req.body.password;
-    for (let i in users) {
-        if (users[i].email === testEmail && users[i].password === testPassword) {
-            res.cookie("user_id", users[i].id);
-            res.redirect("/urls");
-        }
+    //check empty
+    if (!testEmail || !testPassword) {
+        return res.status(401).send('empty email or password');
     }
-    res.send(403,'Wrong credentials');
+    //console.log('function', Auth(testEmail, testPassword));
+    let obj = Auth(testEmail, testPassword)
+    if (obj) {
+        console.log(obj,users[obj].id);
+        res.cookie("user_id", users[obj].id);
+        res.redirect("/urls");
+    } else {
+        res.send('Password incorrect');
+    }
 });
+
 /*
 logout
 */
