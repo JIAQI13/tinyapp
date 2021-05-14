@@ -2,6 +2,7 @@ const express = require("express");
 const morgan = require("morgan");
 const bodyParser = require("body-parser");
 const cookieSession = require('cookie-session');
+const { getUserByEmail, urlForUser, generateRandomString, Auth} = require('./helpers');
 const bcrypt = require('bcryptjs');
 const app = express();
 const PORT = 8080; // default port 8080
@@ -37,47 +38,6 @@ const urlDatabase = {
 };
 
 /*
-utility function that generate random string for our url
-*/
-const getRandomInt = function(max) {
-  return Math.floor(Math.random() * max);
-};
-
-const generateRandomString = function() {
-  let result = '';
-  let characters = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-  for (let i = 0; i < 6; i++) {
-    result += characters[getRandomInt(characters.length)];
-  }
-  return result;
-};
-
-/*
-utility function that check the email has been registered or not
-*/
-const getUserByEmail = function(emailString) {
-  for (let i in users) {
-    if (users[i].email === emailString) {
-      return true;
-    }
-  }
-  return false;
-};
-
-/*
-return the URLs where the userID is equal to the id of the currently logged-in user
-*/
-const urlForUser = function(userString) {
-  let result = {};
-  for (let i in urlDatabase) {
-    if (urlDatabase[i].userID === userString) {
-      result[i] = urlDatabase[i];
-    }
-  }
-  return result;
-};
-
-/*
 use middleware
 */
 app.set("view engine", "ejs");
@@ -96,7 +56,7 @@ app.get("/", (req, res) => {
 });
 
 app.get("/urls", (req, res) => {
-  let result = urlForUser(req.session.user_id);
+  let result = urlForUser(req.session.user_id,urlDatabase);
   const templateVars = { urls: result, user_id: req.session.user_id };
   res.render("urls_index", templateVars);
 });
@@ -154,8 +114,10 @@ app.post("/urls/:shortURL/update", (req, res) => {
   if (req.session.user_id === urlDatabase[req.params.shortURL].userID) {
     urlDatabase[req.params.shortURL].longURL = 'http://' + req.body.longURL;
     res.redirect("/urls");
+  }else{
+      res.send(400, 'thats not ur url,dont mess around');
+
   }
-  res.send(400, 'thats not ur url kid,dont mess around');
 });
 
 /*
@@ -166,8 +128,10 @@ app.post("/urls/:shortURL/delete", (req, res) => {
     const urlToDelete = req.params.shortURL;
     delete urlDatabase[urlToDelete];
     res.redirect("/urls");
+  }else{
+      res.send(400, 'thats not ur url,dont mess around');
+
   }
-  res.send(400, 'thats not ur url kid,dont mess around');
 });
 
 /*
@@ -183,7 +147,7 @@ app.post("/register", (req, res) => {
   //if email or password is empty
   if (!req.body.email || !req.body.password) {
     res.send(400, 'empty emaill or password');
-  } else if (getUserByEmail(req.body.email)) {
+  } else if (getUserByEmail(req.body.email,users)) {
     res.send(400, 'email already used');
   } else {
     bcrypt.genSalt(10)
@@ -209,17 +173,6 @@ app.get("/login", (req, res) => {
   res.render("login", templateVars);
 });
 
-//Utility function to login
-const Auth = function(testEmail, testPassword) {
-  for (let i in users) {
-    let result = bcrypt.compareSync(testPassword, users[i].password);
-    if (result && users[i].email === testEmail) {
-      return i;
-    }
-  }
-  return false;
-};
-
 app.post("/login", (req, res) => {
   let testEmail = req.body.email;
   let testPassword = req.body.password;
@@ -227,12 +180,12 @@ app.post("/login", (req, res) => {
   if (!testEmail || !testPassword) {
     return res.status(401).send('empty email or password');
   }
-  let obj = Auth(testEmail, testPassword);
+  let obj = Auth(testEmail, testPassword,users);
   if (obj) {
     req.session.user_id = users[obj].id;
     res.redirect("/urls");
   } else {
-    res.send('Password incorrect');
+    res.send('Password or email incorrect');
   }
 });
 
