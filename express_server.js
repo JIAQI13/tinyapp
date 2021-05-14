@@ -12,29 +12,23 @@ user data
 */
 
 const users = {
+    /* user example
   "userRandomID": {
     id: "userRandomID",
     email: "user@example.com",
     password: "purple-monkey-dinosaur"
   },
-  "user2RandomID": {
-    id: "user2RandomID",
-    email: "user2@example.com",
-    password: "dishwasher-funk"
-  },
-  "abcdefg": {
-    id: "abcdefg",
-    email: "abc@abc",
-    password: "123"
-  }
+  */
 };
 
 /*
 url database
 */
 const urlDatabase = {
+    /* database example
   321: { longURL: "https://www.tsn.ca", userID: "abcdefg" },
   123: { longURL: "https://www.google.ca", userID: "userRandomID" }
+  */
 };
 
 /*
